@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gincana Bíblica Kids</title>
-    <!-- Bibliotecas Externas (CDNs Mais Estáveis) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Bibliotecas Diretas (Estáveis) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
 
     <style>
         body {
@@ -19,26 +20,18 @@
             color: #1e293b;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
         }
 
-        /* Animações CSS Customizadas (Substituindo Framer Motion para evitar erros) */
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        .slide-up { animation: slideUp 0.5s ease-out; }
-        .pop-in { animation: popIn 0.3s cubic-bezier(0.26, 1.36, 0.74, 1.29); }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-
-        /* Estilo Bento Box */
         .bento-card {
-            border-radius: 2rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border-radius: 2.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             border-bottom: 8px solid rgba(0,0,0,0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: all 0.2s ease-out;
         }
-        .bento-card:active { transform: translateY(4px); border-bottom-width: 4px; }
+        .bento-card:active {
+            transform: translateY(4px);
+            border-bottom-width: 4px;
+        }
 
         .bento-blue { background: linear-gradient(135deg, #3b82f6, #0ea5e9); border-color: #2563eb; color: white; }
         .bento-yellow { background-color: #facc15; border-color: #ca8a04; color: #713f12; }
@@ -46,290 +39,248 @@
         .bento-green { background-color: #4ade80; border-color: #16a34a; color: white; }
         .bento-orange { background-color: #fb923c; border-color: #ea580c; color: white; }
         .bento-purple { background-color: white; border-color: #f3e8ff; }
-        
+
+        /* Animações Simples sem Framer Motion */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-
-        /* Loading fallback */
-        #root:empty::after {
-            content: "Carregando Gincana Bíblica...";
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #3b82f6;
-        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
+            Carregando o Jogo Bíblico...
+        </div>
+    </div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- BANCO DE DADOS DE PERGUNTAS ---
-        const QUESTIONS = [
-            { id: 'c1', category: 'Criação', difficulty: 'Fácil', text: 'Quantos dias Deus levou para criar o mundo?', options: ['3 dias', '7 dias', '6 dias'], correctAnswer: '6 dias', explanation: 'Deus criou o mundo em 6 dias e descansou no sétimo.' },
-            { id: 'c2', category: 'Criação', difficulty: 'Fácil', text: 'Quem foi o primeiro homem criado por Deus?', options: ['Noé', 'Abraão', 'Adão'], correctAnswer: 'Adão', explanation: 'Adão foi o primeiro homem, e Eva a primeira mulher.' },
-            { id: 'c3', category: 'Criação', difficulty: 'Fácil', text: 'O que Deus criou no primeiro dia?', options: ['A luz', 'Os animais', 'As plantas'], correctAnswer: 'A luz', explanation: 'No primeiro dia, Deus disse: "Haja luz".' },
-            { id: 'j1', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Onde Jesus nasceu?', options: ['Jerusalém', 'Belém', 'Nazaré'], correctAnswer: 'Belém', explanation: 'Jesus nasceu em uma manjedoura na cidade de Belém.' },
-            { id: 'j2', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Quantos discípulos Jesus tinha?', options: ['10', '12', '7'], correctAnswer: '12', explanation: 'Jesus escolheu 12 amigos próximos para serem Seus apóstolos.' },
-            { id: 'h1', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem construiu a arca para salvar os animais do dilúvio?', options: ['Moisés', 'Noé', 'Davi'], correctAnswer: 'Noé', explanation: 'Noé obedeceu a Deus e construiu uma grande arca.' },
-            { id: 'h2', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Qual herói venceu o gigante Golias com uma funda e uma pedra?', options: ['Sansão', 'Davi', 'Salomão'], correctAnswer: 'Davi', explanation: 'O jovem Davi confiou em Deus e venceu o gigante Golias.' },
-            { id: 'cm1', category: 'Criação', difficulty: 'Médio', text: 'O que Deus criou no QUARTO dia?', options: ['Sol, lua e estrelas', 'Aves e peixes', 'Animais terrestres', 'O céu'], correctAnswer: 'Sol, lua e estrelas', explanation: 'No quarto dia, Deus fez os luminares no céu.' },
-            { id: 'jm1', category: 'Histórias de Jesus', difficulty: 'Médio', text: 'Qual foi o primeiro milagre de Jesus?', options: ['Andar sobre as águas', 'Multiplicar pães', 'Transformar água em vinho', 'Curar um cego'], correctAnswer: 'Transformar água em vinho', explanation: 'Jesus transformou água em vinho em uma festa de casamento em Caná.' },
-            { id: 'hm1', category: 'Heróis da Fé', difficulty: 'Médio', text: 'Quem abriu o Mar Vermelho com o seu cajado, guiado por Deus?', options: ['Josué', 'Moisés', 'Elias', 'Gideão'], correctAnswer: 'Moisés', explanation: 'Moisés liderou o povo de Israel e Deus abriu o mar para eles passarem.' }
+        // --- BANCO DE DADOS EXPANDIDO ---
+        const ALL_QUESTIONS = [
+            // CRIAÇÃO
+            { id: 'c1', category: 'Criação', difficulty: 'Fácil', text: 'Quantos dias Deus levou para criar o mundo?', options: ['3 dias', '7 dias', '6 dias'], correctAnswer: '6 dias', explanation: 'Deus criou tudo em 6 dias e descansou no sétimo.' },
+            { id: 'c2', category: 'Criação', difficulty: 'Fácil', text: 'Quem foi o primeiro homem criado por Deus?', options: ['Noé', 'Abraão', 'Adão'], correctAnswer: 'Adão', explanation: 'Adão foi o primeiro, seguido por Eva.' },
+            { id: 'c3', category: 'Criação', difficulty: 'Fácil', text: 'O que Deus criou no primeiro dia?', options: ['A luz', 'Os animais', 'As plantas'], correctAnswer: 'A luz', explanation: 'Deus disse: "Haja luz".' },
+            { id: 'c4', category: 'Criação', difficulty: 'Fácil', text: 'Quem deu nome aos animais?', options: ['Deus', 'Adão', 'Eva'], correctAnswer: 'Adão', explanation: 'Deus trouxe os bichos para Adão nomear.' },
+            { id: 'c5', category: 'Criação', difficulty: 'Fácil', text: 'Qual era o nome do jardim onde Adão e Eva moravam?', options: ['Jardim da Paz', 'Jardim do Éden', 'Jardim de Deus'], correctAnswer: 'Jardim do Éden', explanation: 'Era um lugar perfeito e lindo.' },
+            { id: 'c6', category: 'Criação', difficulty: 'Fácil', text: 'A partir de que parte de Adão Deus criou Eva?', options: ['Da mão', 'Da costela', 'Do pé'], correctAnswer: 'Da costela', explanation: 'Deus fez Eva para ser a companheira de Adão.' },
+            { id: 'c7', category: 'Criação', difficulty: 'Fácil', text: 'O que aconteceu no 7º dia?', options: ['Deus dormiu', 'Deus descansou', 'Teve chuva'], correctAnswer: 'Deus descansou', explanation: 'Ele santificou o dia de descanso.' },
+            { id: 'c8', category: 'Criação', difficulty: 'Fácil', text: 'Qual animal enganou Eva no jardim?', options: ['Leão', 'Serpente', 'Lobo'], correctAnswer: 'Serpente', explanation: 'A serpente era a mais astuta das criaturas.' },
+            { id: 'c9', category: 'Criação', difficulty: 'Médio', text: 'O que Deus criou no QUARTO dia?', options: ['Aves', 'Sol, Lua e Estrelas', 'Peixes', 'Homem'], correctAnswer: 'Sol, Lua e Estrelas', explanation: 'Ele criou os luminares do céu.' },
+            { id: 'c10', category: 'Criação', difficulty: 'Médio', text: 'Em que dia Deus criou o homem?', options: ['5º dia', '6º dia', '7º dia', '4º dia'], correctAnswer: '6º dia', explanation: 'No último dia da criação animal.' },
+
+            // JESUS
+            { id: 'j1', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Onde Jesus nasceu?', options: ['Jerusalém', 'Belém', 'Nazaré'], correctAnswer: 'Belém', explanation: 'Nasceu em uma manjedoura simples.' },
+            { id: 'j2', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Quantos discípulos Jesus tinha?', options: ['10', '12', '7'], correctAnswer: '12', explanation: 'Ele escolheu 12 apóstolos.' },
+            { id: 'j3', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Quem era a mãe de Jesus?', options: ['Maria', 'Marta', 'Isabel'], correctAnswer: 'Maria', explanation: 'Maria foi a escolhida de Deus.' },
+            { id: 'j4', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Com o que Jesus alimentou a multidão?', options: ['Pão e Peixe', 'Maçãs', 'Uvas'], correctAnswer: 'Pão e Peixe', explanation: '5 pães e 2 peixinhos!' },
+            { id: 'j5', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Jesus caminhou sobre o quê?', options: ['Areia', 'Água', 'Nuvens'], correctAnswer: 'Água', explanation: 'Ele caminhou no mar durante a tempestade.' },
+            { id: 'j6', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Quem batizou Jesus?', options: ['Pedro', 'João Batista', 'Tiago'], correctAnswer: 'João Batista', explanation: 'No Rio Jordão.' },
+            { id: 'j7', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Qual era a profissão de José, o pai de Jesus na terra?', options: ['Pescador', 'Carpinteiro', 'Pastor'], correctAnswer: 'Carpinteiro', explanation: 'Jesus ajudava José no trabalho.' },
+            { id: 'j8', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Quem Jesus ressuscitou depois de 4 dias?', options: ['Lázaro', 'Bartimeu', 'Zaqueu'], correctAnswer: 'Lázaro', explanation: 'Jesus disse: "Lázaro, vem para fora!".' },
+            { id: 'j9', category: 'Histórias de Jesus', difficulty: 'Médio', text: 'Qual foi o primeiro milagre de Jesus?', options: ['Curar cego', 'Transformar água em vinho', 'Caminhar no mar'], correctAnswer: 'Transformar água em vinho', explanation: 'Aconteceu em um casamento em Caná.' },
+            { id: 'j10', category: 'Histórias de Jesus', difficulty: 'Médio', text: 'Onde Jesus foi tentado por 40 dias?', options: ['No barco', 'No templo', 'No deserto'], correctAnswer: 'No deserto', explanation: 'Ele ficou lá em jejum e oração.' },
+
+            // HERÓIS
+            { id: 'h1', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem construiu a arca?', options: ['Noé', 'Abraão', 'Davi'], correctAnswer: 'Noé', explanation: 'Noé salvou sua família e os animais.' },
+            { id: 'h2', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem venceu o gigante Golias?', options: ['Sansão', 'Davi', 'Salomão'], correctAnswer: 'Davi', explanation: 'Davi usou apenas uma pedra e sua fé.' },
+            { id: 'h3', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem tinha muita força no cabelo?', options: ['Davi', 'Sansão', 'Elias'], correctAnswer: 'Sansão', explanation: 'Sua força vinha de Deus através do voto.' },
+            { id: 'h4', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem foi jogado na cova dos leões?', options: ['José', 'Daniel', 'Gideão'], correctAnswer: 'Daniel', explanation: 'Deus fechou a boca dos leões.' },
+            { id: 'h5', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem abriu o Mar Vermelho?', options: ['Josué', 'Moisés', 'Noé'], correctAnswer: 'Moisés', explanation: 'O povo atravessou em solo seco.' },
+            { id: 'h6', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem recebeu os 10 Mandamentos?', options: ['Davi', 'Moisés', 'Samuel'], correctAnswer: 'Moisés', explanation: 'Deus deu a lei no Monte Sinai.' },
+            { id: 'h7', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem foi vendido pelos irmãos mas virou governador?', options: ['Benjamin', 'José', 'Ruben'], correctAnswer: 'José', explanation: 'José virou governador do Egito.' },
+            { id: 'h8', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem é conhecido como o "Pai da Fé"?', options: ['Abraão', 'Adão', 'Noé'], correctAnswer: 'Abraão', explanation: 'Pois confiou em Deus para tudo.' },
+            { id: 'h9', category: 'Heróis da Fé', difficulty: 'Médio', text: 'Qual profeta foi levado ao céu num redemoinho?', options: ['Elias', 'Eliseu', 'Daniel'], correctAnswer: 'Elias', explanation: 'Com um carro de fogo!' },
+            { id: 'h10', category: 'Heróis da Fé', difficulty: 'Médio', text: 'Quantas voltas o povo deu em Jericó no último dia?', options: ['1 volta', '7 voltas', '3 voltas'], correctAnswer: '7 voltas', explanation: 'E os muros caíram!' }
         ];
 
         function App() {
-            const [state, setState] = useState({
-                currentStep: 'home',
-                selectedCategory: null,
-                selectedDifficulty: null,
-                score: 0,
-                currentQuestionIndex: 0,
-                answers: [],
-            });
-
+            const [view, setView] = useState('home'); // home, quiz, results
+            const [selectedCategory, setSelectedCategory] = useState('Criação');
+            const [difficulty, setDifficulty] = useState('Fácil');
+            const [quizQuestions, setQuizQuestions] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [feedback, setFeedback] = useState(null);
             const [highScore, setHighScore] = useState(0);
-            const [showFeedback, setShowFeedback] = useState(null);
             const [showAd, setShowAd] = useState(true);
-            const [adCountdown, setAdCountdown] = useState(5);
+            const [timer, setTimer] = useState(5);
 
             useEffect(() => {
-                const saved = localStorage.getItem('biblical-high-score-v2');
+                const saved = localStorage.getItem('biblical_highscore');
                 if (saved) setHighScore(parseInt(saved));
 
-                if (showAd) {
-                    const timer = setInterval(() => {
-                        setAdCountdown(prev => {
-                            if (prev <= 1) {
-                                clearInterval(timer);
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                    }, 1000);
-                    return () => clearInterval(timer);
-                }
-            }, [showAd]);
+                const countdown = setInterval(() => {
+                    setTimer(t => (t > 0 ? t - 1 : 0));
+                }, 1000);
+                return () => clearInterval(countdown);
+            }, []);
 
-            const filteredQuestions = useMemo(() => {
-                if (!state.selectedCategory || !state.selectedDifficulty) return [];
-                return QUESTIONS.filter(q => 
-                    q.category === state.selectedCategory && 
-                    q.difficulty === state.selectedDifficulty
-                );
-            }, [state.selectedCategory, state.selectedDifficulty]);
-
-            const handleStart = (category, difficulty) => {
-                setState({
-                    currentStep: 'quiz',
-                    selectedCategory: category,
-                    selectedDifficulty: difficulty,
-                    score: 0,
-                    currentQuestionIndex: 0,
-                    answers: [],
-                });
+            const startQuiz = () => {
+                const filtered = ALL_QUESTIONS.filter(q => q.category === selectedCategory && q.difficulty === difficulty);
+                // Embaralha e pega 8 perguntas (ou todas se tiver menos de 8)
+                const shuffled = [...filtered].sort(() => Math.random() - 0.5).slice(0, 8);
+                setQuizQuestions(shuffled);
+                setCurrentIndex(0);
+                setScore(0);
+                setFeedback(null);
+                setView('quiz');
             };
 
-            const handleAnswer = (answer) => {
-                if (showFeedback) return;
-                const currentQuestion = filteredQuestions[state.currentQuestionIndex];
-                const isCorrect = answer === currentQuestion.correctAnswer;
-                
-                setShowFeedback({ correct: isCorrect, explanation: currentQuestion.explanation });
-                
-                setState(prev => ({
-                    ...prev,
-                    score: isCorrect ? prev.score + (state.selectedDifficulty === 'Fácil' ? 10 : 25) : prev.score,
-                    answers: [...prev.answers, isCorrect],
-                }));
+            const handleAnswer = (opt) => {
+                if (feedback) return;
+                const correct = opt === quizQuestions[currentIndex].correctAnswer;
+                if (correct) setScore(s => s + 10);
+                setFeedback({ correct, explanation: quizQuestions[currentIndex].explanation });
             };
 
-            const nextQuestion = () => {
-                setShowFeedback(null);
-                if (state.currentQuestionIndex + 1 < filteredQuestions.length) {
-                    setState(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
+            const nextStep = () => {
+                if (currentIndex + 1 < quizQuestions.length) {
+                    setCurrentIndex(i => i + 1);
+                    setFeedback(null);
                 } else {
-                    if (state.score > highScore) {
-                        setHighScore(state.score);
-                        localStorage.setItem('biblical-high-score-v2', state.score.toString());
+                    if (score > highScore) {
+                        setHighScore(score);
+                        localStorage.setItem('biblical_highscore', score.toString());
                     }
-                    setState(prev => ({ ...prev, currentStep: 'result' }));
+                    setView('results');
                 }
-            };
-
-            const reset = () => {
-                setState({ currentStep: 'home', selectedCategory: null, selectedDifficulty: null, score: 0, currentQuestionIndex: 0, answers: [] });
             };
 
             return (
-                <div className="min-h-screen">
-                    <div className="max-w-5xl mx-auto p-4 md:p-8">
-                        {/* HEADER */}
-                        <header className="flex justify-between items-center mb-8 fade-in">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-yellow-400 rounded-full border-4 border-white shadow-sm flex items-center justify-center text-2xl">📖</div>
-                                <h1 className="text-2xl md:text-3xl font-black text-sky-600 tracking-tight uppercase leading-none">Pequenos<br/>Discípulos</h1>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="bg-white px-4 py-2 rounded-full border-4 border-sky-200 shadow-sm flex items-center gap-2">
-                                    <span className="text-yellow-500 font-bold">⭐</span>
-                                    <span className="font-black text-sky-800">{highScore}</span>
+                <div className="min-h-screen p-4 md:p-8 animate-fade">
+                    {/* Header */}
+                    <div className="max-w-4xl mx-auto flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center text-2xl shadow-md border-4 border-white">📖</div>
+                            <h1 className="text-2xl font-black text-sky-600 uppercase leading-none">Pequenos<br/>Discípulos</h1>
+                        </div>
+                        <div className="bg-white px-5 py-2 rounded-full border-4 border-sky-100 shadow-sm font-black text-sky-700">
+                            ⭐ {highScore}
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="max-w-4xl mx-auto">
+                        {view === 'home' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bento-card bento-blue p-8 md:col-span-2 flex flex-col justify-center min-h-[300px]">
+                                    <h2 className="text-4xl md:text-6xl font-black mb-4 uppercase">Bora Jogar?</h2>
+                                    <p className="text-xl mb-8 opacity-90">Escolha uma categoria abaixo e responda 8 perguntas!</p>
+                                    <button onClick={startQuiz} className="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-black text-2xl py-5 rounded-2xl shadow-[0_6px_0_0_#ca8a04] active:scale-95 transition-all">
+                                        COMEÇAR O DESAFIO! 🚀
+                                    </button>
+                                </div>
+
+                                <div className="bento-card bento-purple p-6">
+                                    <h3 className="font-black text-purple-600 uppercase mb-4">Dificuldade</h3>
+                                    <div className="flex gap-4">
+                                        {['Fácil', 'Médio'].map(d => (
+                                            <button key={d} onClick={() => setDifficulty(d)} className={`flex-1 p-4 rounded-xl border-4 font-black transition-all ${difficulty === d ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-slate-100 text-slate-400'}`}>
+                                                {d}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bento-card bg-white p-6 md:row-span-1 border-4 border-slate-100">
+                                    <h3 className="font-black text-slate-400 uppercase mb-4">Categorias</h3>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {['Criação', 'Histórias de Jesus', 'Heróis da Fé'].map(cat => (
+                                            <button key={cat} onClick={() => setSelectedCategory(cat)} className={`p-4 rounded-xl border-4 font-black text-left transition-all ${selectedCategory === cat ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-slate-50 text-slate-400'}`}>
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </header>
-
-                        {/* CONTEÚDO PRINCIPAL */}
-                        {state.currentStep === 'home' && <Home onStart={handleStart} highScore={highScore} />}
-                        {state.currentStep === 'quiz' && (
-                            <Quiz 
-                                question={filteredQuestions[state.currentQuestionIndex]} 
-                                totalQuestions={filteredQuestions.length}
-                                currentIndex={state.currentQuestionIndex}
-                                onAnswer={handleAnswer}
-                                feedback={showFeedback}
-                                onNext={nextQuestion}
-                                score={state.score}
-                            />
                         )}
-                        {state.currentStep === 'result' && (
-                            <Result score={state.score} totalCorrect={state.answers.filter(Boolean).length} totalQuestions={filteredQuestions.length} onReset={reset} />
+
+                        {view === 'quiz' && (
+                            <div className="animate-fade">
+                                <div className="flex justify-between mb-4 font-black text-sky-400 uppercase text-sm">
+                                    <span>Pergunta {currentIndex + 1} de {quizQuestions.length}</span>
+                                    <span className="text-orange-500">Pontos: {score}</span>
+                                </div>
+                                <div className="w-full bg-slate-200 h-4 rounded-full mb-8 overflow-hidden">
+                                    <div className="bg-sky-400 h-full transition-all duration-500" style={{ width: `${((currentIndex + 1) / quizQuestions.length) * 100}%` }}></div>
+                                </div>
+
+                                <div className="bento-card bg-white p-10 text-center mb-6 border-4 border-slate-100">
+                                    <h2 className="text-3xl font-black text-slate-800">{quizQuestions[currentIndex].text}</h2>
+                                </div>
+
+                                <div className="grid gap-4">
+                                    {quizQuestions[currentIndex].options.map((opt, i) => (
+                                        <button key={i} onClick={() => handleAnswer(opt)} className={`bento-card bg-white p-6 text-left font-black text-xl flex items-center gap-4 ${feedback ? (opt === quizQuestions[currentIndex].correctAnswer ? 'bg-green-400 text-white' : 'opacity-30') : 'hover:bg-sky-50'}`}>
+                                            <span className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">{i + 1}</span>
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {feedback && (
+                                    <div className={`mt-8 bento-card p-8 animate-fade ${feedback.correct ? 'bento-green' : 'bento-orange'}`}>
+                                        <h4 className="text-3xl font-black uppercase mb-2">{feedback.correct ? 'Correto! 🎉' : 'Quase lá...'}</h4>
+                                        <p className="text-lg font-bold mb-6 opacity-90">{feedback.explanation}</p>
+                                        <button onClick={nextStep} className="w-full bg-white text-slate-900 font-black py-4 rounded-xl shadow-lg">PRÓXIMA PERGUNTA</button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {view === 'results' && (
+                            <div className="text-center animate-fade">
+                                <div className="text-8xl mb-4">🏆</div>
+                                <h2 className="text-5xl font-black text-sky-600 mb-8 uppercase">Fim de Jogo!</h2>
+                                <div className="bento-card bento-yellow p-12 mb-8">
+                                    <div className="text-8xl font-black">{score}</div>
+                                    <p className="text-2xl font-black uppercase opacity-70">Pontos Marcados</p>
+                                </div>
+                                <button onClick={() => setView('home')} className="w-full bg-orange-400 py-6 rounded-3xl text-white font-black text-2xl shadow-xl active:scale-95 transition-all">
+                                    JOGAR NOVAMENTE 🔄
+                                </button>
+                            </div>
                         )}
                     </div>
 
-                    {/* ANÚNCIO POPUP */}
+                    {/* Anúncio Flutuante Corrigido */}
                     {showAd && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm fade-in">
-                            <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl relative border-4 border-white pop-in">
-                                <div className="bg-orange-500 p-6 text-white text-center">
-                                    <h3 className="text-2xl font-black uppercase">Oferta Kids! 🎁</h3>
+                        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden animate-fade">
+                                <div className="bg-orange-500 p-6 text-center text-white">
+                                    <h3 className="text-2xl font-black uppercase">Oferta para Você! 🎁</h3>
                                 </div>
-                                <div className="p-8 space-y-6">
-                                    <a href="https://s.shopee.com.br/901ZjWq5Gd" target="_blank" rel="noopener" className="block group">
-                                        <div className="aspect-square bg-slate-100 rounded-3xl mb-4 overflow-hidden relative border-2 border-slate-100 transition-all">
-                                            <img src="https://down-br.img.susercontent.com/file/sg-11134201-7reog-m8ga35ia06j94b" alt="Produto" className="w-full h-full object-cover" />
-                                            <div className="absolute top-4 right-4 bg-pink-500 text-white font-black px-4 py-2 rounded-full shadow-lg">-35% OFF</div>
+                                <div className="p-8">
+                                    <a href="https://s.shopee.com.br/901ZjWq5Gd" target="_blank" className="block text-center group">
+                                        <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden mb-4 border-4 border-white shadow-inner">
+                                            <img src="https://down-br.img.susercontent.com/file/sg-11134201-7reog-m8ga35ia06j94b" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                         </div>
-                                        <div className="text-center">
-                                            <h4 className="text-xl font-black text-slate-800 line-clamp-2">Quebra-Cabeça Jesus 20 peças em MDF</h4>
-                                            <div className="flex items-center justify-center gap-2 mt-2">
-                                                <span className="text-slate-400 line-through font-bold">R$ 34,90</span>
-                                                <span className="text-3xl font-black text-orange-600">R$ 22,71</span>
-                                            </div>
-                                        </div>
+                                        <h4 className="font-black text-xl text-slate-800 line-clamp-2">Quebra-Cabeça Jesus 20 peças MDF</h4>
+                                        <div className="text-3xl font-black text-orange-600 mt-2">R$ 22,71</div>
                                     </a>
-                                    <div className="flex flex-col gap-3">
-                                        <a href="https://s.shopee.com.br/901ZjWq5Gd" target="_blank" rel="noopener" className="w-full py-4 rounded-2xl bg-orange-500 text-white font-black text-xl text-center shadow-[0_6px_0_0_#ea580c]">COMPRAR AGORA 🚀</a>
-                                        <button disabled={adCountdown > 0} onClick={() => setShowAd(false)} className={`w-full py-3 rounded-xl font-bold transition-all ${adCountdown > 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-400 hover:text-slate-600'}`}>
-                                            {adCountdown > 0 ? `Fechar em ${adCountdown}s` : 'Fechar Anúncio'}
+                                    <div className="mt-8 space-y-3">
+                                        <a href="https://s.shopee.com.br/901ZjWq5Gd" target="_blank" className="block w-full bg-orange-500 py-4 rounded-2xl text-white font-black text-center shadow-lg active:scale-95 transition-all">
+                                            QUERO NA SHOPEE! 🛍️
+                                        </a>
+                                        <button disabled={timer > 0} onClick={() => setShowAd(false)} className={`w-full py-4 font-black transition-all ${timer > 0 ? 'text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
+                                            {timer > 0 ? `Fechar em ${timer}s` : 'FECHAR ANÚNCIO'}
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
-                </div>
-            );
-        }
-
-        function Home({ onStart, highScore }) {
-            const [category, setCategory] = useState('Criação');
-            const [difficulty, setDifficulty] = useState('Fácil');
-            const categories = [
-                { name: 'Criação', icon: '🌿', bento: 'bento-green' },
-                { name: 'Histórias de Jesus', icon: '⚡', bento: 'bento-orange' },
-                { name: 'Heróis da Fé', icon: '🏆', bento: 'bento-blue' }
-            ];
-
-            return (
-                <main className="grid grid-cols-1 md:grid-cols-12 gap-6 slide-up">
-                    <div className="md:col-span-8 md:row-span-2 bento-card bento-blue p-8 md:p-10 relative overflow-hidden flex flex-col justify-center min-h-[300px]">
-                        <div className="relative z-10">
-                            <span className="bg-blue-600/30 px-4 py-1 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider mb-4 inline-block">Desafio do Dia</span>
-                            <h2 className="text-4xl md:text-6xl font-black leading-tight mb-4 uppercase">Bora<br/>Jogar?</h2>
-                            <p className="text-blue-50 text-lg md:text-xl max-w-md mb-8 font-medium">Você conhece a Bíblia? É hora de mostrar seu conhecimento!</p>
-                            <button onClick={() => onStart(category, difficulty)} className="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-black text-xl md:text-2xl px-12 py-4 rounded-2xl shadow-[0_6px_0_0_#d97706] w-full md:w-auto">COMEÇAR AGORA!</button>
-                        </div>
-                        <div className="absolute bottom-[-10px] right-2 text-[8rem] opacity-30 select-none">🦒</div>
-                    </div>
-                    <div className="md:col-span-4 bento-card bento-pink p-6 border-4 border-pink-100 flex flex-col justify-between min-h-[180px]">
-                        <h3 className="text-pink-500 font-black text-xl uppercase leading-none">Recorde</h3>
-                        <div className="flex items-end gap-2"><span className="text-6xl font-black text-pink-500">{highScore}</span><span className="text-pink-400 font-black mb-1">PTS</span></div>
-                    </div>
-                    <div className="md:col-span-4 bento-card bento-purple p-6 border-4 border-purple-100 min-h-[180px]">
-                        <h3 className="text-purple-600 font-black text-xl uppercase mb-4 leading-none">Nível</h3>
-                        <div className="flex flex-col gap-2">
-                            {['Fácil', 'Médio'].map(d => (
-                                <button key={d} onClick={() => setDifficulty(d)} className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all ${difficulty === d ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-white border-slate-100 text-slate-400'}`}>
-                                    <span className="font-black">{d}</span>
-                                    {difficulty === d ? '✔' : null}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    {categories.map(cat => (
-                        <button key={cat.name} onClick={() => setCategory(cat.name)} className={`md:col-span-4 bento-card ${cat.bento} p-6 flex flex-col justify-end text-left min-h-[180px] relative ${category === cat.name ? 'ring-4 ring-sky-300 scale-[1.02]' : 'opacity-90'}`}>
-                            <div className="text-5xl mb-auto">{cat.icon}</div>
-                            <h3 className="text-2xl font-black leading-tight mt-4 uppercase">{cat.name}</h3>
-                        </button>
-                    ))}
-                </main>
-            );
-        }
-
-        function Quiz({ question, totalQuestions, currentIndex, onAnswer, feedback, onNext, score }) {
-            return (
-                <div className="max-w-2xl mx-auto space-y-8 slide-up">
-                    <div className="flex justify-between items-center bg-white p-6 bento-card bento-pink border-4 border-sky-100">
-                        <div className="space-y-1"><p className="text-xs font-black text-sky-400 uppercase">Pergunta</p><p className="text-4xl font-black text-sky-600 leading-none">{currentIndex + 1} / {totalQuestions}</p></div>
-                        <div className="text-right space-y-1"><p className="text-xs font-black text-orange-400 uppercase">Pontos</p><p className="text-4xl font-black text-orange-500 leading-none">{score}</p></div>
-                    </div>
-                    <div className="bento-card bg-white p-12 border-4 border-slate-100 text-center"><h2 className="text-3xl md:text-4xl font-black text-slate-800 leading-tight">{question.text}</h2></div>
-                    <div className="grid grid-cols-1 gap-4">
-                        {question.options.map((option, idx) => (
-                            <button key={idx} disabled={!!feedback} onClick={() => onAnswer(option)} className={`bento-card p-6 text-left font-black text-xl flex items-center gap-4 ${feedback ? (option === question.correctAnswer ? 'bg-green-400 text-white' : 'opacity-30 bg-white') : 'bg-white border-slate-200 text-slate-700'}`}>
-                                <span className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-sm">{idx + 1}</span>{option}
-                            </button>
-                        ))}
-                    </div>
-                    {feedback && (
-                        <div className={`bento-card p-8 pop-in ${feedback.correct ? 'bento-green' : 'bg-red-500 text-white border-red-700'}`}>
-                            <div className="flex gap-6 items-start">
-                                <div className="text-4xl">{feedback.correct ? "✅" : "❌"}</div>
-                                <div>
-                                    <p className="text-3xl font-black uppercase">{feedback.correct ? 'ACERTOU!' : 'QUASE LÁ...'}</p>
-                                    <p className="text-lg font-bold opacity-90 leading-tight">{feedback.explanation}</p>
-                                </div>
-                            </div>
-                            <button onClick={onNext} className="mt-8 w-full py-5 rounded-2xl bg-white text-slate-900 font-black text-2xl shadow-xl">PRÓXIMA PERGUNTA ➔</button>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        function Result({ score, totalCorrect, totalQuestions, onReset }) {
-            const percentage = Math.round((totalCorrect / totalQuestions) * 100);
-            return (
-                <div className="flex flex-col items-center gap-8 max-w-2xl mx-auto slide-up">
-                    <div className="text-center space-y-4"><div className="text-8xl">🌟</div><h1 className="text-6xl font-black text-sky-600 uppercase tracking-tight">Incrível!</h1></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                        <div className="bento-card bento-yellow p-8 text-center flex flex-col justify-center min-h-[220px]"><p className="text-8xl font-black leading-none">{score}</p><p className="font-black opacity-70 uppercase mt-2">Seus Pontos</p></div>
-                        <div className="bento-card bg-white p-8 border-4 border-slate-100 flex flex-col justify-center space-y-4">
-                            <div className="flex justify-between border-b-2 border-slate-50 pb-2"><span className="font-bold text-slate-400 uppercase">Acertos</span><span className="text-3xl font-black text-green-500">{totalCorrect}</span></div>
-                            <div className="flex justify-between border-b-2 border-slate-50 pb-2"><span className="font-bold text-slate-400 uppercase">Total</span><span className="text-3xl font-black text-sky-500">{totalQuestions}</span></div>
-                            <div className="flex justify-between"><span className="font-bold text-slate-400 uppercase">Desempenho</span><span className="text-3xl font-black text-pink-500">{percentage}%</span></div>
-                        </div>
-                    </div>
-                    <button onClick={onReset} className="w-full py-6 rounded-[2.5rem] bento-card bento-orange text-white font-black text-3xl shadow-xl uppercase">JOGAR DE NOVO ↺</button>
                 </div>
             );
         }
