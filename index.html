@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gincana Bíblica Kids</title>
+    
+    <!-- Bibliotecas via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    
+    <!-- Fonte -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f0f9ff;
+            color: #1e293b;
+        }
+        .bento-card {
+            border-radius: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-bottom: 6px solid rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .bento-blue { background: linear-gradient(135deg, #3b82f6, #0ea5e9); border-color: #2563eb; color: white; }
+        .bento-yellow { background-color: #facc15; border-color: #ca8a04; color: #713f12; }
+        .bento-pink { background-color: white; border-color: #fce7f3; }
+        .bento-green { background-color: #4ade80; border-color: #16a34a; color: white; }
+        .bento-orange { background-color: #fb923c; border-color: #ea580c; color: white; }
+        .bento-purple { background-color: white; border-color: #f3e8ff; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { motion, AnimatePresence } = FramerMotion;
+
+        const QUESTIONS = [
+            { id: 'c1', category: 'Criação', difficulty: 'Fácil', text: 'Quantos dias Deus levou para criar o mundo?', options: ['3 dias', '7 dias', '6 dias'], correctAnswer: '6 dias', explanation: 'Deus criou o mundo em 6 dias e descansou no sétimo.' },
+            { id: 'c2', category: 'Criação', difficulty: 'Fácil', text: 'Quem foi o primeiro homem criado por Deus?', options: ['Noé', 'Abraão', 'Adão'], correctAnswer: 'Adão', explanation: 'Adão foi o primeiro homem, e Eva a primeira mulher.' },
+            { id: 'j1', category: 'Histórias de Jesus', difficulty: 'Fácil', text: 'Onde Jesus nasceu?', options: ['Jerusalém', 'Belém', 'Nazaré'], correctAnswer: 'Belém', explanation: 'Jesus nasceu em uma manjedoura na cidade de Belém.' },
+            { id: 'h1', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Quem construiu a arca para salvar os animais do dilúvio?', options: ['Moisés', 'Noé', 'Davi'], correctAnswer: 'Noé', explanation: 'Noé obedeceu a Deus e construiu uma grande arca.' },
+            { id: 'h2', category: 'Heróis da Fé', difficulty: 'Fácil', text: 'Qual herói venceu o gigante Golias?', options: ['Sansão', 'Davi', 'Salomão'], correctAnswer: 'Davi', explanation: 'Davi confiou em Deus e venceu o gigante.' }
+        ];
+
+        function App() {
+            const [state, setState] = useState({
+                currentStep: 'home',
+                selectedCategory: null,
+                selectedDifficulty: null,
+                score: 0,
+                currentQuestionIndex: 0,
+                answers: [],
+            });
+
+            const [highScore, setHighScore] = useState(0);
+            const [showFeedback, setShowFeedback] = useState(null);
+            const [showAd, setShowAd] = useState(true);
+            const [adCountdown, setAdCountdown] = useState(5);
+
+            useEffect(() => {
+                const saved = localStorage.getItem('biblical-high-score');
+                if (saved) setHighScore(parseInt(saved));
+
+                if (showAd) {
+                    const timer = setInterval(() => {
+                        setAdCountdown(prev => {
+                            if (prev <= 1) {
+                                clearInterval(timer);
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                    return () => clearInterval(timer);
+                }
+            }, [showAd]);
+
+            const filteredQuestions = useMemo(() => {
+                return QUESTIONS.filter(q => 
+                    q.category === state.selectedCategory && 
+                    q.difficulty === state.selectedDifficulty
+                );
+            }, [state.selectedCategory, state.selectedDifficulty]);
+
+            const handleStart = (category, difficulty) => {
+                setState({
+                    currentStep: 'quiz',
+                    selectedCategory: category,
+                    selectedDifficulty: difficulty,
+                    score: 0,
+                    currentQuestionIndex: 0,
+                    answers: [],
+                });
+            };
+
+            const handleAnswer = (answer) => {
+                if (showFeedback) return;
+                const currentQuestion = filteredQuestions[state.currentQuestionIndex];
+                const isCorrect = answer === currentQuestion.correctAnswer;
+                setShowFeedback({ correct: isCorrect, explanation: currentQuestion.explanation });
+                setState(prev => ({
+                    ...prev,
+                    score: isCorrect ? prev.score + 10 : prev.score,
+                    answers: [...prev.answers, isCorrect],
+                }));
+            };
+
+            const nextQuestion = () => {
+                setShowFeedback(null);
+                if (state.currentQuestionIndex + 1 < filteredQuestions.length) {
+                    setState(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
+                } else {
+                    if (state.score > highScore) {
+                        setHighScore(state.score);
+                        localStorage.setItem('biblical-high-score', state.score.toString());
+                    }
+                    setState(prev => ({ ...prev, currentStep: 'result' }));
+                }
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-8">
+                    <div className="max-w-4xl mx-auto">
+                        <header className="flex justify-between items-center mb-8">
+                            <div className="flex items-center gap-3">
+                                <span className="text-4xl">📖</span>
+                                <h1 className="text-2xl font-black text-sky-600 uppercase leading-none">Pequenos<br/>Discípulos</h1>
+                            </div>
+                            <div className="bg-white px-4 py-2 rounded-full border-4 border-sky-100 font-black text-sky-800">
+                                ⭐ {highScore}
+                            </div>
+                        </header>
+
+                        <AnimatePresence mode="wait">
+                            {state.currentStep === 'home' && (
+                                <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2 bento-card bento-blue p-8 relative overflow-hidden flex flex-col justify-center min-h-[250px]">
+                                        <h2 className="text-5xl font-black mb-4">Gincana Bíblica!</h2>
+                                        <button 
+                                            onClick={() => handleStart('Criação', 'Fácil')}
+                                            className="bg-yellow-400 text-yellow-900 font-black text-2xl px-8 py-4 rounded-2xl shadow-lg w-max"
+                                        >
+                                            JOGAR AGORA!
+                                        </button>
+                                        <span className="absolute bottom-[-20px] right-4 text-[10rem] opacity-20">🦒</span>
+                                    </div>
+                                    <div className="bento-card bento-green p-6 cursor-pointer" onClick={() => handleStart('Criação', 'Fácil')}>
+                                        <span className="text-4xl">🌿</span>
+                                        <h3 className="text-2xl font-black mt-4">Histórias da Criação</h3>
+                                    </div>
+                                    <div className="bento-card bento-orange p-6 cursor-pointer" onClick={() => handleStart('Histórias de Jesus', 'Fácil')}>
+                                        <span className="text-4xl">⚡</span>
+                                        <h3 className="text-2xl font-black mt-4">Vida de Jesus</h3>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {state.currentStep === 'quiz' && (
+                                <motion.div key="quiz" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                                    <div className="bento-card bg-white p-8 text-center border-4 border-sky-100 mb-6">
+                                        <h2 className="text-3xl font-black">{filteredQuestions[state.currentQuestionIndex]?.text}</h2>
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {filteredQuestions[state.currentQuestionIndex]?.options.map((opt, i) => (
+                                            <button 
+                                                key={i}
+                                                onClick={() => handleAnswer(opt)}
+                                                className={`bento-card p-6 text-xl font-black text-left ${showFeedback ? (opt === filteredQuestions[state.currentQuestionIndex].correctAnswer ? 'bg-green-400 text-white' : 'bg-white opacity-50') : 'bg-white hover:bg-sky-50'}`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {showFeedback && (
+                                        <div className={`mt-6 p-6 bento-card ${showFeedback.correct ? 'bento-green' : 'bg-red-500 text-white'}`}>
+                                            <p className="text-2xl font-black mb-2">{showFeedback.correct ? 'ACERTOU!' : 'ERRRADO!'}</p>
+                                            <p className="font-bold opacity-90 mb-4">{showFeedback.explanation}</p>
+                                            <button onClick={nextQuestion} className="w-full bg-white text-slate-900 py-4 rounded-xl font-black">PRÓXIMA!</button>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+
+                            {state.currentStep === 'result' && (
+                                <div className="text-center">
+                                    <h2 className="text-6xl font-black text-sky-600 mb-4">FIM!</h2>
+                                    <div className="bento-card bento-yellow p-8 inline-block shadow-2xl">
+                                        <p className="text-7xl font-black">{state.score}</p>
+                                        <p className="font-black uppercase tracking-widest">Pontos</p>
+                                    </div>
+                                    <button onClick={() => setState(s => ({ ...s, currentStep: 'home'}))} className="block w-full mt-8 py-6 bento-card bento-orange text-3xl font-black">JOGAR DE NOVO!</button>
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    <AnimatePresence>
+                        {showAd && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-white">
+                                    <div className="bg-orange-500 p-6 text-white text-center">
+                                        <h3 className="text-2xl font-black">OFERTA ESPECIAL! 🎁</h3>
+                                    </div>
+                                    <div className="p-8 text-center">
+                                        <img src="https://down-br.img.susercontent.com/file/sg-11134201-7reog-m8ga35ia06j94b" className="w-full rounded-2xl mb-4 border-2 border-slate-100" />
+                                        <h4 className="font-black text-xl mb-2">Quebra-Cabeça Jesus (20 peças)</h4>
+                                        <p className="text-3xl font-black text-orange-600 mb-6 font-mono">R$ 22,71</p>
+                                        <a href="https://s.shopee.com.br/901ZjWq5Gd" target="_blank" className="block w-full py-4 bg-orange-500 text-white font-black rounded-xl mb-4 text-xl">COMPRAR NA SHOPEE</a>
+                                        <button 
+                                            disabled={adCountdown > 0} 
+                                            onClick={() => setShowAd(false)}
+                                            className={`w-full py-2 font-bold ${adCountdown > 0 ? 'text-slate-300' : 'text-slate-400 underline'}`}
+                                        >
+                                            {adCountdown > 0 ? `Fechar em ${adCountdown}s` : 'Fechar Anúncio'}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
